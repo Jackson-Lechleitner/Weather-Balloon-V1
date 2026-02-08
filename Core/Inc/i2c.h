@@ -44,7 +44,8 @@ void MX_I2C1_Init(void);
 void MX_I2C2_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+HAL_StatusTypeDef write_registers(I2C_HandleTypeDef* hi2c, unsigned char i2cAddress, unsigned char regAddr, unsigned char* data, int size);
+HAL_StatusTypeDef read_registers(I2C_HandleTypeDef* hi2c, unsigned char i2cAddress, unsigned char regAddr, unsigned char* data, int size);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

@@ -27,7 +27,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "flight_functions.h"
+#include "bmp390.h"
+#include "am2320.h"
+#include "ds3231.h"
+#include "video.h"
+#include "swarm.h"
+#include "gps.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,7 +54,12 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+PeripheralStates i2c1State = IDLE;
+PeripheralStates i2c2State = IDLE;
+PeripheralStates uart1State = IDLE;
+PeripheralStates uart2State = IDLE;
+PeripheralStates uart3State = IDLE;
+PeripheralStates adcState = IDLE;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -98,8 +109,9 @@ int main(void)
   MX_USART2_UART_Init();
   MX_FATFS_Init();
   MX_SPI1_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  bmp390_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -107,7 +119,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+    
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

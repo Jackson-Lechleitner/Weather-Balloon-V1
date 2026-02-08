@@ -27,6 +27,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "main.h"
 #include "FATFS_SD.h"
 /* USER CODE END Includes */
 
@@ -64,6 +65,7 @@ void I2C2_ER_IRQHandler(void);
 void SPI1_IRQHandler(void);
 void USART1_IRQHandler(void);
 void USART2_IRQHandler(void);
+void USART3_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

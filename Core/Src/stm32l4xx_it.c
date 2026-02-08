@@ -18,7 +18,6 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include "main.h"
 #include "stm32l4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -41,13 +40,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-FlightStates flightState = PREFLIGHT;
-I2CStates i2c1State = IDLE, i2c2State = IDLE;
 
-Sensor internalAM2320 = {0, {0, 0, 0, 0}, AM2320_ADDR, "Internal Temp and Humidity"};
-Sensor externalAM2320 = {0, {0, 0, 0, 0}, AM2320_ADDR, "External Temp and Humidity"};
-Sensor no2 = {0, {0, 0, 0, 0}, 0, "NO2 Sensor"};
-Sensor bmp390 = {0, {0, 0, 0, 0}, 0, "Altitude Sensor"};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -67,8 +60,16 @@ extern I2C_HandleTypeDef hi2c2;
 extern SPI_HandleTypeDef hspi1;
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
+extern UART_HandleTypeDef huart3;
 /* USER CODE BEGIN EV */
 extern uint16_t Timer1, Timer2;
+
+extern PeripheralStates i2c1State;
+extern PeripheralStates i2c2State;
+extern PeripheralStates uart1State;
+extern PeripheralStates uart2State;
+extern PeripheralStates uart3State;
+extern PeripheralStates adcState;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -218,28 +219,6 @@ void SysTick_Handler(void)
 void EXTI4_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI4_IRQn 0 */
-  /* This ISR is triggered by the DS3231. It basically triggers a full sensor read
-  and position/altitude sweep.*/
-
-  switch (flightState) {
-    case PREFLIGHT:
-      break;
-    case TAKEOFF:
-      break;
-    case ASCENT:
-      break;
-    case CRUISE:
-      break;
-    case DESCENT:
-      break;
-    case LANDING:
-      break;
-    case RECOVERY:
-      break;
-    default:
-      break;
-  }
-
 
   /* USER CODE END EXTI4_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(DS3231_INT_PIN_Pin);
@@ -259,6 +238,8 @@ void ADC1_IRQHandler(void)
   HAL_ADC_IRQHandler(&hadc1);
   /* USER CODE BEGIN ADC1_IRQn 1 */
 
+  adcState = IDLE;
+
   /* USER CODE END ADC1_IRQn 1 */
 }
 
@@ -272,6 +253,8 @@ void I2C1_EV_IRQHandler(void)
   /* USER CODE END I2C1_EV_IRQn 0 */
   HAL_I2C_EV_IRQHandler(&hi2c1);
   /* USER CODE BEGIN I2C1_EV_IRQn 1 */
+
+  i2c1State = IDLE;
 
   /* USER CODE END I2C1_EV_IRQn 1 */
 }
@@ -287,6 +270,8 @@ void I2C1_ER_IRQHandler(void)
   HAL_I2C_ER_IRQHandler(&hi2c1);
   /* USER CODE BEGIN I2C1_ER_IRQn 1 */
 
+  i2c1State = ERROR;
+
   /* USER CODE END I2C1_ER_IRQn 1 */
 }
 
@@ -301,6 +286,8 @@ void I2C2_EV_IRQHandler(void)
   HAL_I2C_EV_IRQHandler(&hi2c2);
   /* USER CODE BEGIN I2C2_EV_IRQn 1 */
 
+  i2c2State = IDLE;
+
   /* USER CODE END I2C2_EV_IRQn 1 */
 }
 
@@ -314,6 +301,8 @@ void I2C2_ER_IRQHandler(void)
   /* USER CODE END I2C2_ER_IRQn 0 */
   HAL_I2C_ER_IRQHandler(&hi2c2);
   /* USER CODE BEGIN I2C2_ER_IRQn 1 */
+
+  i2c2State = ERROR;
 
   /* USER CODE END I2C2_ER_IRQn 1 */
 }
@@ -343,6 +332,8 @@ void USART1_IRQHandler(void)
   HAL_UART_IRQHandler(&huart1);
   /* USER CODE BEGIN USART1_IRQn 1 */
 
+  uart1State = IDLE;
+
   /* USER CODE END USART1_IRQn 1 */
 }
 
@@ -357,7 +348,25 @@ void USART2_IRQHandler(void)
   HAL_UART_IRQHandler(&huart2);
   /* USER CODE BEGIN USART2_IRQn 1 */
 
+  uart2State = IDLE;
+
   /* USER CODE END USART2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART3 global interrupt.
+  */
+void USART3_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART3_IRQn 0 */
+
+  /* USER CODE END USART3_IRQn 0 */
+  HAL_UART_IRQHandler(&huart3);
+  /* USER CODE BEGIN USART3_IRQn 1 */
+
+  uart3State = IDLE;
+
+  /* USER CODE END USART3_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

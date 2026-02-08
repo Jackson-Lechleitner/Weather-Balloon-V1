@@ -32,28 +32,20 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 typedef enum {PREFLIGHT, TAKEOFF, ASCENT, CRUISE, DESCENT, LANDING, RECOVERY} FlightStates;
-typedef enum {IDLE, TEMP, HUMIDITY} I2CStates;
+typedef enum {IDLE, BUSY, ERROR} PeripheralStates;
 
 typedef struct {
-  unsigned char seconds;
-  unsigned char minutes;
-  unsigned char hours;
-  unsigned char dayOfMonth;
-  unsigned char month;
-  unsigned char year;
-} Time;
-
-typedef struct {
-  int data;
-  int buffer[4];
-  const int id;
-  const char* name;
-} Sensor;
+  unsigned char byteBuffer;
+  unsigned char buffer[256];
+  int idx = 0;
+} UartBuffer;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -70,19 +62,7 @@ typedef struct {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-int set_ds3231_time(Time* time);    // 1 on failure, 0 on success
-int set_ds3231_alarm(Time* time);   // 1 on failure, 0 on success
-int get_ds3231_time(Time* time);    // 1 on failure, 0 on success
 
-int get_position(double* lat, double* lon);
-
-void preflight();
-void takeoff();
-void ascent();
-void cruise();
-void descent();
-void landing();
-void recovery();
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

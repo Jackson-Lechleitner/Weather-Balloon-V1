@@ -7,8 +7,6 @@
  * For More Information, Tutorials, etc.
  * Visit Website: www.DeepBlueMbedded.com
  */
-#include "main.h"
-#include "diskio.h"
 #include "FATFS_SD.h"
 
 #define TRUE  1

@@ -21,6 +21,8 @@
 #include "i2c.h"
 
 /* USER CODE BEGIN 0 */
+extern PeripheralStates i2c1State;
+extern PeripheralStates i2c2State;
 
 /* USER CODE END 0 */
 
@@ -251,5 +253,51 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 }
 
 /* USER CODE BEGIN 1 */
+HAL_StatusTypeDef write_registers(I2C_HandleTypeDef* hi2c, unsigned char i2cAddress, unsigned char regAddr, unsigned char* data, int size) {
+  unsigned char buffer[256];
+  buffer[0] = regAddr;
+  memcpy(&buffer[1], data, size);
 
+  HAL_StatusTypeDef status = HAL_I2C_Master_Transmit_IT(hi2c, i2cAddress, buffer, size+1);
+
+  if (status == HAL_OK) {
+    switch(hi2c->Instance) {
+      case I2C1:
+        i2c1State = BUSY;
+        break;
+      case I2C2:
+        i2c2State = BUSY
+        break;
+      default:
+        break;
+    }
+  }
+
+  return status;
+}
+
+HAL_StatusTypeDef read_registers(I2C_HandleTypeDef* hi2c, unsigned char i2cAddress, unsigned char regAddr, unsigned char* data, int size) {
+  HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(hi2c, (i2cAddress<<1), &regAddr, 1, HAL_MAX_DELAY);
+
+  if (status != HAL_OK) {
+    return status;
+  }
+
+  status = HAL_I2C_Master_Receive_IT(hi2c, (i2cAddress<<1), data, size);
+
+  if (status == HAL_OK) {
+    switch(hi2c->Instance) {
+      case I2C1:
+        i2c1State = BUSY;
+        break;
+      case I2C2:
+        i2c2State = BUSY
+        break;
+      default:
+        break;
+    }
+  }
+
+  return status;
+}
 /* USER CODE END 1 */
