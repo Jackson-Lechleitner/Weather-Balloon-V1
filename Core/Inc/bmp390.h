@@ -7,6 +7,7 @@
 
 int bmp390_init();
 void set_sea_level_pressure(double pressure);
+void set_sea_level_temperature(double temperature);
 double get_altitude();
 
 #endif // BMP390_H

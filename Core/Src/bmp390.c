@@ -36,7 +36,8 @@
 
 extern I2C_HandleTypeDef hi2c2;
 extern PeripheralStates i2c1State;
-double seaLevelPressure = 1013.25; // hPa
+double seaLevelPressure = 101325; // Pa
+double seaLevelTemperature = 288.15; // K
 
 // Some compensation constants
 double t1, t2, t3, t_lin;
@@ -71,14 +72,14 @@ static double compensate_pressure(int uncomp) {
 int bmp390_init() {
     // Send the soft reset command
     unsigned char cmd = BMP3_SOFT_RESET_CMD;
-    write_registers(&hi2c1, BMP390_I2C_ADDR_SEC, BMP3_REG_CMD, &cmd, 1);
+    i2c_write_registers(&hi2c1, BMP390_I2C_ADDR_SEC, BMP3_REG_CMD, &cmd, 1);
 
     // Wait for the command to go through
     while (i2c1State == BUSY);
 
     // Now we get the calibration data
     unsigned char calibData[21];
-    read_registers(&hi2c1, BMP390_I2C_ADDR_SEC, BMP3_REG_CALIB_DATA, calibData, 21);
+    i2c_read_registers(&hi2c1, BMP390_I2C_ADDR_SEC, BMP3_REG_CALIB_DATA, calibData, 21);
 
     // Wait for the command to go through
     while (i2c1State == BUSY);
@@ -139,11 +140,15 @@ void set_sea_level_pressure(double pressure) {
     seaLevelPressure = pressure;
 }
 
+void set_sea_level_temperature(double temperature) {
+    seaLevelTemperature = temperature;
+}
+
 double get_altitude() {
     unsigned char bmpData[6];
 
     // Get register preassure and temperature data from the BMP390
-    read_registers(&hi2c1, BMP390_I2C_ADDR_SEC, BMP3_REG_DATA, bmpData, 6);
+    i2c_read_registers(&hi2c1, BMP390_I2C_ADDR_SEC, BMP3_REG_DATA, bmpData, 6);
 
     while (i2c1State == BUSY);
 
@@ -155,18 +160,17 @@ double get_altitude() {
     double temperature = compensate_temperature(uncompensatedTemperature);
     double pressure = compensate_pressure(uncompensatedPressure);
 
-    // I gotta finish the altitude formula
-    const double R = 8.31432;
-    const double M = 0.0289644;
-    const double g = 9.90665;
+    // Const for the Lapse Altitude Calculations
+    const double n = 0.190263;
+    const double L = 0.0065;
     double altitude;
 
     // Convert pressure and temperature to altitude in meters (assuming we're not to high)
-    if (pressure/seaLevelPressure > 0.000001) {
-        altitude = log(pressure/seaLevelPressure) * R * T / (g * M * -1);
+    if (pressure > 0) {
+        altitude = (seaLevelTemperature / L) * (1 - pow(pressure/seaLevelPressure, n));
     }
     else {
-        altitude = 100000;
+        altitude = 60000.0; // meters
     }
 
     // Convert meters to feet

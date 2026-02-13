@@ -117,7 +117,6 @@ void Error_Handler(void);
 #define SD_Card_CS_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-#define AM2320_ADDR 0x5C
 
 /* USER CODE END Private defines */
 

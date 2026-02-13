@@ -253,7 +253,7 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 }
 
 /* USER CODE BEGIN 1 */
-HAL_StatusTypeDef write_registers(I2C_HandleTypeDef* hi2c, unsigned char i2cAddress, unsigned char regAddr, unsigned char* data, int size) {
+HAL_StatusTypeDef i2c_write_registers(I2C_HandleTypeDef* hi2c, unsigned char i2cAddress, unsigned char regAddr, unsigned char* data, int size) {
   unsigned char buffer[256];
   buffer[0] = regAddr;
   memcpy(&buffer[1], data, size);
@@ -276,7 +276,7 @@ HAL_StatusTypeDef write_registers(I2C_HandleTypeDef* hi2c, unsigned char i2cAddr
   return status;
 }
 
-HAL_StatusTypeDef read_registers(I2C_HandleTypeDef* hi2c, unsigned char i2cAddress, unsigned char regAddr, unsigned char* data, int size) {
+HAL_StatusTypeDef i2c_read_registers(I2C_HandleTypeDef* hi2c, unsigned char i2cAddress, unsigned char regAddr, unsigned char* data, int size) {
   HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(hi2c, (i2cAddress<<1), &regAddr, 1, HAL_MAX_DELAY);
 
   if (status != HAL_OK) {
