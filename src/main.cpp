@@ -19,31 +19,41 @@
 
 typedef enum { PREFLIGHT, TAKEOFF, CRUISE, LANDING, RECOVERY } FlightStates;
 
-struct SensorReadings {
+typedef struct SensorReadings {
   double internalTempC;
   double internalHumidityPct;
   double externalTempC;
   double externalHumidityPct;
   double bmpPressure;
   double bmpTemperatureC;
-};
+} SensorReadings_t ;
 
-struct Bmp390Readings {
+typedef struct Bmp390Readings {
   double pressure;
   double temperatureC;
-};
+} Bmp390Readings_t;
+
+typedef struct Time {
+  int8_t second;
+  int8_t minute;
+  int8_t hour;
+  int8_t day;
+  int8_t month;
+  int8_t year;
+} Time_t;
 
 // DS3231 Functions
 void rtc_alarm_isr();
 void set_alarm(int minutesFromNow);
 void service_rtc_alarm();
 bool read_rtc_time_from_serial(char* rtcRxBuffer, size_t bufferSize);
+void get_rtc_time(Time_t &time);
 
 // Sensor functions
 bool read_am2320(AM232X& sensor, double& temperatureC, double& humidityPct);
 bool read_bmp390(double& pressure, double& temperatureC);
-void read_all_sensors(SensorReadings& readings);
-void print_sensor_readings(const SensorReadings& readings);
+void read_all_sensors(SensorReadings_t& readings);
+void print_sensor_readings(const SensorReadings_t& readings);
 void log_sensor_data();
 
 // BMP390 / altitude
@@ -59,8 +69,7 @@ void trim_line_endings(char* str);
 // Hah, funny typo (don't fix it)
 int serial_str_to_numer(const char* str, int startIdx, int endIdx);
 
-// Hardware peripherals on the L4
-HardwareTimer hwTimer(TIM2);
+// GPS serial
 HardwareSerial gps(USART1);
 
 // On some STM32 cores this may need explicit SDA/SCL pins instead of (1).
@@ -77,7 +86,7 @@ volatile bool rtcAlarmTriggered = false;
 bool sdReady = false;
 FlightStates flightState = PREFLIGHT;
 
-SensorReadings sensorReadings;
+SensorReadings_t sensorReadings_t;
 
 const char* LOG_FILE_NAME = "flight.csv";
 
@@ -137,46 +146,46 @@ void loop() {
   }
 
   switch (flightState) {
-    case PREFLIGHT:
-      if (Serial.available()) {
-        char commandBuffer[64];
-        size_t commandLen = Serial.readBytesUntil('\n', commandBuffer, sizeof(commandBuffer) - 1);
-        commandBuffer[commandLen] = '\0';
-        trim_line_endings(commandBuffer);
-        process_command(commandBuffer);
-      }
-      break;
+  case PREFLIGHT:
+    if (Serial.available()) {
+      char commandBuffer[64];
+      size_t commandLen = Serial.readBytesUntil('\n', commandBuffer, sizeof(commandBuffer) - 1);
+      commandBuffer[commandLen] = '\0';
+      trim_line_endings(commandBuffer);
+      process_command(commandBuffer);
+    }
+    break;
 
-    case TAKEOFF:
-      read_all_sensors(sensorReadings);
-      print_sensor_readings(sensorReadings);
+  case TAKEOFF:
+    read_all_sensors(sensorReadings_t);
+    print_sensor_readings(sensorReadings_t);
+    log_sensor_data();
+    break;
+
+  case CRUISE:
+    if (rtcAlarmTriggered) {
+      rtcAlarmTriggered = false;
+      service_rtc_alarm();
+      read_all_sensors(sensorReadings_t);
       log_sensor_data();
-      break;
+    }
 
-    case CRUISE:
-      if (rtcAlarmTriggered) {
-        rtcAlarmTriggered = false;
-        service_rtc_alarm();
-        read_all_sensors(sensorReadings);
-        log_sensor_data();
-      }
+    // Enter stop mode until the RTC alarm or another interrupt wakes the MCU.
+    // After waking from STOP, some STM32 cores need clock re-init depending on framework/version.
+    HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
+    break;
 
-      // Enter stop mode until the RTC alarm or another interrupt wakes the MCU.
-      // After waking from STOP, some STM32 cores need clock re-init depending on framework/version.
-      HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
-      break;
+  case LANDING:
+    read_all_sensors(sensorReadings_t);
+    print_sensor_readings(sensorReadings_t);
+    log_sensor_data();
+    break;
 
-    case LANDING:
-      read_all_sensors(sensorReadings);
-      print_sensor_readings(sensorReadings);
-      log_sensor_data();
-      break;
+  case RECOVERY:
+    break;
 
-    case RECOVERY:
-      break;
-
-    default:
-      break;
+  default:
+    break;
   }
 }
 
@@ -238,6 +247,18 @@ bool read_rtc_time_from_serial(char* rtcRxBuffer, size_t bufferSize) {
   return index >= 17;
 }
 
+void get_rtc_time(Time_t &time) {
+  // Read time from DS3231 RTC over I2C
+  bool hr12 = false, pmFlag = false, century = false;
+  
+  time.second = rtc.getSecond();
+  time.minute = rtc.getMinute();
+  time.hour = rtc.getHour(hr12, pmFlag);
+  time.day = rtc.getDate();
+  time.month = rtc.getMonth(century);
+  time.year = rtc.getYear();
+}
+
 bool read_am2320(AM232X& sensor, double& temperatureC, double& humidityPct) {
   temperatureC = sensor.getTemperature();
   humidityPct = sensor.getHumidity();
@@ -258,7 +279,7 @@ bool read_bmp390(double& pressure, double& temperatureC) {
   return true;
 }
 
-void read_all_sensors(SensorReadings& readings) {
+void read_all_sensors(SensorReadings_t& readings) {
   readings.internalTempC = NAN;
   readings.internalHumidityPct = NAN;
   readings.externalTempC = NAN;
@@ -271,7 +292,7 @@ void read_all_sensors(SensorReadings& readings) {
   read_bmp390(readings.bmpPressure, readings.bmpTemperatureC);
 }
 
-void print_sensor_readings(const SensorReadings& readings) {
+void print_sensor_readings(const SensorReadings_t& readings) {
   Serial.print("Internal AM2320 Temp C: ");
   Serial.println(readings.internalTempC);
 
@@ -305,24 +326,21 @@ void log_sensor_data() {
     return;
   }
 
-  logFile.print(millis());
-  logFile.print(',');
+  Time_t logTime;
+  get_rtc_time(logTime);
 
-  logFile.print((isnan(sensorReadings.internalTempC) ? 0.0 : sensorReadings.internalTempC), 2);
-  logFile.print(',');
-  logFile.print((isnan(sensorReadings.internalHumidityPct) ? 0.0 : sensorReadings.internalHumidityPct), 2);
-  logFile.print(',');
+  char log[512];
+  snprintf(log, sizeof(log), "%2d:%2d:%2d %2d/%2d/%4d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n",
+           logTime.hour, logTime.minute, logTime.second, logTime.month, logTime.day, logTime.year,
+           isnan(sensorReadings_t.internalTempC) ? 0.0 : sensorReadings_t.internalTempC,
+           isnan(sensorReadings_t.internalHumidityPct) ? 0.0 : sensorReadings_t.internalHumidityPct,
+           isnan(sensorReadings_t.externalTempC) ? 0.0 : sensorReadings_t.externalTempC,
+           isnan(sensorReadings_t.externalHumidityPct) ? 0.0 : sensorReadings_t.externalHumidityPct,
+           isnan(sensorReadings_t.bmpPressure) ? 0.0 : sensorReadings_t.bmpPressure,
+           isnan(sensorReadings_t.bmpTemperatureC) ? 0.0 : sensorReadings_t.bmpTemperatureC,
+           pressure_to_altitude(sensorReadings_t.bmpPressure));
 
-  logFile.print((isnan(sensorReadings.externalTempC) ? 0.0 : sensorReadings.externalTempC), 2);
-  logFile.print(',');
-  logFile.print((isnan(sensorReadings.externalHumidityPct) ? 0.0 : sensorReadings.externalHumidityPct), 2);
-  logFile.print(',');
-
-  logFile.print((isnan(sensorReadings.bmpPressure) ? 0.0 : sensorReadings.bmpPressure), 2);
-  logFile.print(',');
-  logFile.print((isnan(sensorReadings.bmpTemperatureC) ? 0.0 : sensorReadings.bmpTemperatureC), 2);
-  logFile.print(',');
-  logFile.println(pressure_to_altitude(sensorReadings.bmpPressure), 2);
+  logFile.print(log);
 
   logFile.close();
 }
@@ -393,7 +411,7 @@ void process_command(const char* command) {
   }
 
   if (strcmp(command, "LOG") == 0) {
-    read_all_sensors(sensorReadings);
+    read_all_sensors(sensorReadings_t);
     log_sensor_data();
     Serial.println("Logged");
     return;
